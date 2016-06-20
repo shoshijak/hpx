@@ -12,8 +12,10 @@
 #include <hpx/lcos/future.hpp>
 #include <hpx/traits/is_executor.hpp>
 #include <hpx/traits/is_iterator.hpp>
+#include <hpx/traits/is_range.hpp>
 #include <hpx/util/decay.hpp>
 #include <hpx/util/invoke.hpp>
+#include <hpx/util/range.hpp>
 #include <hpx/util/tuple.hpp>
 
 #include <hpx/compute/cuda/allocator.hpp>
@@ -29,8 +31,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/range/functions.hpp>
-
 namespace hpx { namespace compute { namespace cuda
 {
     namespace detail
@@ -43,29 +43,21 @@ namespace hpx { namespace compute { namespace cuda
             static void call(cuda::target const& target, F && f,
                 Shape const& shape, Ts &&... ts)
             {
-// Before Boost V1.56 boost::size() does not respect the iterator category of
-// its argument.
-#if BOOST_VERSION < 105600
-                std::size_t count =
-                    std::distance(boost::begin(shape), boost::end(shape));
-#else
-                std::size_t count = boost::size(shape);
-#endif
+                std::size_t count = util::size(shape);
 
                 int threads_per_block =
                     (std::min)(1024, static_cast<int>(count));
                 int num_blocks = static_cast<int>(
                     (count + threads_per_block - 1) / threads_per_block);
 
-                typedef typename boost::range_const_iterator<Shape>::type
-                    iterator_type;
-                typedef typename std::iterator_traits<iterator_type>::value_type
+
+                typedef typename hpx::traits::range_traits<Shape>::value_type
                     value_type;
                 typedef cuda::allocator<value_type> alloc_type;
 
                 // transfer shape to the GPU
                 compute::vector<value_type, alloc_type> shape_container(
-                    boost::begin(shape), boost::end(shape), alloc_type(target));
+                    util::begin(shape), util::end(shape), alloc_type(target));
 
                 detail::launch(
                     target, num_blocks, threads_per_block,
@@ -96,9 +88,7 @@ namespace hpx { namespace compute { namespace cuda
             static void call(cuda::target const& target, F && f,
                 Shape const& shape, Ts &&... ts)
             {
-                typedef typename boost::range_const_iterator<Shape>::type
-                    iterator_type;
-                typedef typename std::iterator_traits<iterator_type>::value_type
+                typedef typename hpx::traits::range_traits<Shape>::value_type
                     value_type;
 
                 for (auto const& s: shape)

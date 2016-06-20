@@ -12,6 +12,7 @@
 #include <hpx/lcos/wait_all.hpp>
 #include <hpx/util/decay.hpp>
 #include <hpx/util/deferred_call.hpp>
+#include <hpx/util/range.hpp>
 #include <hpx/util/tuple.hpp>
 
 #include <hpx/parallel/execution_policy.hpp>
@@ -25,7 +26,6 @@
 #include <hpx/util/unused.hpp>
 
 #include <boost/exception_ptr.hpp>
-#include <boost/range/functions.hpp>
 
 #include <cstddef>
 #include <iterator>
@@ -117,7 +117,7 @@ namespace hpx { namespace parallel { namespace util
                 FwdIter first, std::size_t count, F1 && f1, F2 && f2,
                 std::vector<std::size_t> const& chunk_sizes, Data && data)
             {
-                HPX_ASSERT(boost::size(data) >= boost::size(chunk_sizes));
+                HPX_ASSERT(hpx::util::size(data) >= hpx::util::size(chunk_sizes));
 
                 typedef typename hpx::util::decay<ExPolicy>::type::executor_type
                     executor_type;
@@ -134,9 +134,9 @@ namespace hpx { namespace parallel { namespace util
                 scoped_executor_parameters<parameters_type> scoped_param(
                     policy.parameters());
 
-                typename data_type::const_iterator data_it = boost::begin(data);
+                typename data_type::const_iterator data_it = hpx::util::begin(data);
                 typename std::vector<std::size_t>::const_iterator chunk_size_it =
-                    boost::begin(chunk_sizes);
+                    hpx::util::begin(chunk_sizes);
 
                 typedef typename hpx::util::tuple<
                         typename data_type::value_type, FwdIter, std::size_t
@@ -337,7 +337,7 @@ namespace hpx { namespace parallel { namespace util
                 FwdIter first, std::size_t count, F1 && f1, F2 && f2,
                 std::vector<std::size_t> const& chunk_sizes, Data && data)
             {
-                HPX_ASSERT(boost::size(data) >= boost::size(chunk_sizes));
+                HPX_ASSERT(hpx::util::size(data) >= hpx::util::size(chunk_sizes));
 
                 typedef typename hpx::util::decay<ExPolicy>::type::executor_type
                     executor_type;
@@ -358,9 +358,9 @@ namespace hpx { namespace parallel { namespace util
                             scoped_executor_parameters
                         >(policy.parameters()));
 
-                typename data_type::const_iterator data_it = boost::begin(data);
+                typename data_type::const_iterator data_it = hpx::util::begin(data);
                 typename std::vector<std::size_t>::const_iterator chunk_size_it =
-                    boost::begin(chunk_sizes);
+                    hpx::util::begin(chunk_sizes);
 
                 typedef typename hpx::util::tuple<
                         typename data_type::value_type, FwdIter, std::size_t

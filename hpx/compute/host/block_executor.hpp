@@ -15,10 +15,11 @@
 #include <hpx/runtime/threads/executors/thread_pool_attached_executors.hpp>
 #include <hpx/traits/is_executor.hpp>
 #include <hpx/util/deferred_call.hpp>
+#include <hpx/util/range.hpp>
 #include <hpx/util/unwrapped.hpp>
 
 #include <boost/atomic.hpp>
-#include <boost/range/iterator_range_core.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -130,19 +131,13 @@ namespace hpx { namespace compute { namespace host
                         F, Shape, Ts...
                     >::type
             > > results;
-// Before Boost V1.56 boost::size() does not respect the iterator category of
-// its argument.
-#if BOOST_VERSION < 105600
-            std::size_t cnt = std::distance(boost::begin(shape), boost::end(shape));
-#else
-            std::size_t cnt = boost::size(shape);
-#endif
+            std::size_t cnt = util::size(shape);
             std::size_t part_size = cnt / executors_.size();
 
             results.reserve(cnt);
 
             try {
-                auto begin = boost::begin(shape);
+                auto begin = util::begin(shape);
                 for (std::size_t i = 0; i != executors_.size(); ++i)
                 {
                     auto part_end = begin;
@@ -180,19 +175,13 @@ namespace hpx { namespace compute { namespace host
             typename hpx::parallel::v3::detail::bulk_execute_result<
                     F, Shape, Ts...
                 >::type results;
-// Before Boost V1.56 boost::size() does not respect the iterator category of
-// its argument.
-#if BOOST_VERSION < 105600
-            std::size_t cnt = std::distance(boost::begin(shape), boost::end(shape));
-#else
-            std::size_t cnt = boost::size(shape);
-#endif
+            std::size_t cnt = util::size(shape);
             std::size_t part_size = cnt / executors_.size();
 
             results.reserve(cnt);
 
             try {
-                auto begin = boost::begin(shape);
+                auto begin = util::begin(shape);
                 for (std::size_t i = 0; i != executors_.size(); ++i)
                 {
                     auto part_end = begin;

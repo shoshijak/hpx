@@ -15,22 +15,20 @@
 #include <hpx/parallel/config/inline_namespace.hpp>
 #include <hpx/traits/detail/wrap_int.hpp>
 #include <hpx/traits/is_executor.hpp>
+#include <hpx/traits/is_range.hpp>
 #include <hpx/util/always_void.hpp>
 #include <hpx/util/decay.hpp>
 #include <hpx/util/deferred_call.hpp>
 #include <hpx/util/invoke.hpp>
+#include <hpx/util/range.hpp>
 #include <hpx/util/unwrapped.hpp>
 
-#include <iterator>
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <boost/range/const_iterator.hpp>
-#include <boost/range/functions.hpp>
-#include <boost/range/irange.hpp>
 #include <boost/throw_exception.hpp>
 
 #if defined(HPX_HAVE_LIBFUN_STD_EXPERIMENTAL_OPTIONAL)
@@ -266,10 +264,7 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v3)
         struct bulk_async_execute_result
         {
             typedef typename
-                    boost::range_const_iterator<Shape>::type
-                iterator_type;
-            typedef typename
-                    std::iterator_traits<iterator_type>::value_type
+                    hpx::traits::range_traits<Shape>::value_type
                 value_type;
             typedef typename
                     hpx::util::detail::deferred_result_of<
@@ -294,15 +289,7 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v3)
                         typename hpx::util::decay<Executor>::type,
                         typename bulk_async_execute_result<F, S, Ts...>::type
                     >::type> results;
-
-// Before Boost V1.56 boost::size() does not respect the iterator category of
-// its argument.
-#if BOOST_VERSION < 105600
-                results.reserve(
-                    std::distance(boost::begin(shape), boost::end(shape)));
-#else
-                results.reserve(boost::size(shape));
-#endif
+                results.reserve(hpx::util::size(shape));
 
                 for (auto const& elem: shape)
                 {
@@ -385,22 +372,14 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v3)
             static auto call(hpx::traits::detail::wrap_int, Executor&& exec,
                     F && f, S const& shape, Ts &&... ts)
             ->  typename bulk_result_helper<decltype(
-                    exec.async_execute(f, *boost::begin(shape), ts...).get()
+                    exec.async_execute(f, *hpx::util::begin(shape), ts...).get()
                 )>::type
             {
                 std::vector<typename future_type<
                         typename hpx::util::decay<Executor>::type,
                         typename bulk_async_execute_result<F, S, Ts...>::type
                     >::type> results;
-
-// Before Boost V1.56 boost::size() does not respect the iterator category of
-// its argument.
-#if BOOST_VERSION < 105600
-                results.reserve(
-                    std::distance(boost::begin(shape), boost::end(shape)));
-#else
-                results.reserve(boost::size(shape));
-#endif
+                results.reserve(hpx::util::size(shape));
 
                 try {
                     for (auto const& elem: shape)
