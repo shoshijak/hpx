@@ -5,7 +5,7 @@ This web of mind-maps started as a way to figure out the connections between dif
 Start by opening the map called "README" to get a glimpse of the color code and see a table of content.
 
 If you want to fully enjoy the features of the map (eg tabs, hyperlinks, rolling and unrolling branches) as well as edit it, please open the .xmind file with XMind (http://www.xmind.net/, open-source except for pro features, mind-mapping software).
-Otherwise, you are welcome to navigate the map in html, svg or jpeg format.
+Otherwise, you are welcome to navigate the map in jpeg format (svg and html to come).
 
 This map is by no means complete, and the HPX code is constantly evolving and expanding: contributions and comments are more than welcome, either directly on GitHub (https://github.com/shoshijak/hpx/tree/mind-map) or by email (as.jak@protonmail.ch)
 
