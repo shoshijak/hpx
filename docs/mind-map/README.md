@@ -1,6 +1,6 @@
 # A mind-map of HPX
 
-###### Author: Shoshana Jakobovits (shoshijak)
+###### Author: Shoshana Jakobovits ([shoshijak](https://github.com/shoshijak))
 
 
 ---
