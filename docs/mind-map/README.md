@@ -3,6 +3,7 @@
 ###### Author: Shoshana Jakobovits (shoshijak)
 
 
+---
 
 
 This web of mind-maps started as a way to figure out the connections between different parts of the HPX source-code during my internship at CSCS in March-June 2017. The ways we choose visualize concepts and information is quite personal, and so is my map, but after a few weeks I realized that people new to HPX might benefit from this way of viewing the code and the connections between its parts, especially since the HPX documentation leaves quite a few questions unanswered.
