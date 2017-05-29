@@ -11,9 +11,9 @@ namespace hpx { namespace threads { namespace executors { namespace detail
 {
 
     customized_pool_executor::customized_pool_executor(
-            std::string pool_name)
+            const std::string &pool_name)
             : pool_(hpx::threads::get_thread_manager().get_pool(pool_name)),
-              scheduler_(hpx::threads::get_thread_manager().get_scheduler(pool_name))
+              scheduler_(pool_->get_scheduler())
     {
         //! FIXME
         //! throw exception if name = default: tell them to use default_executor
@@ -136,7 +136,7 @@ namespace hpx { namespace threads { namespace executors { namespace detail
 
 namespace hpx { namespace threads { namespace executors
 {
-    customized_pool_executor::customized_pool_executor(std::string pool_name)
+    customized_pool_executor::customized_pool_executor(const std::string &pool_name)
         : scheduled_executor(new detail::customized_pool_executor(pool_name))
     {}
 }}}
