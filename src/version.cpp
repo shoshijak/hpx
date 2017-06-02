@@ -374,11 +374,11 @@ namespace hpx
             strm << "  {localities}: " << cfg.num_localities_ << "\n";
 
         // default scheduler used for this run
-        strm << "  {scheduler}: " << cfg.queuing_ << "\n";
+//        strm << "  {scheduler}: " << cfg.queuing_ << "\n";
 
         // amount of threads and cores configured for this run
-        strm << "  {os-threads}: " << cfg.num_threads_ << "\n";
-        strm << "  {cores}: " << cfg.num_cores_ << "\n";
+//        strm << "  {os-threads}: " << cfg.num_threads_ << "\n";
+//        strm << "  {cores}: " << cfg.num_cores_ << "\n";
 
         return strm.str();
     }

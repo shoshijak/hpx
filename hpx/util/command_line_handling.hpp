@@ -37,9 +37,9 @@ namespace hpx { namespace util
             ini_config_(std::move(ini_config)),
             hpx_main_f_(f),
             node_(std::size_t(-1)),
+            num_localities_(1),
             num_threads_(1),
             num_cores_(1),
-            num_localities_(1),
             pu_step_(1),
             pu_offset_(std::size_t(-1)),
             numa_sensitive_(0)
@@ -58,9 +58,9 @@ namespace hpx { namespace util
         > hpx_main_f_;
 
         std::size_t node_;
+        std::size_t num_localities_;
         std::size_t num_threads_;
         std::size_t num_cores_;
-        std::size_t num_localities_;
         std::size_t pu_step_;
         std::size_t pu_offset_;
         std::string queuing_;

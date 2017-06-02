@@ -627,7 +627,7 @@ namespace hpx
 
                 // Setup all parameters of the resource_partitioner
                 auto &rp = hpx::get_resource_partitioner();
-                rp.init_resources(cfg);
+                rp.configure_pools();
 
                 // initialize logging
                 util::detail::init_logging(cfg.rtcfg_,

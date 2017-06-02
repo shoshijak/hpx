@@ -102,7 +102,7 @@ namespace hpx {
         void ensure_hwloc_compatibility(
                 boost::program_options::variables_map const& vm)
         {
-#if defined(HPX_HAVE_HWLOC)
+#if defined(XXX_HPX_HAVE_HWLOC)
             // pu control is available for HWLOC only
             if (vm.count("hpx:pu-offset")) {
                 throw detail::command_line_error("Invalid command line option "
@@ -116,7 +116,7 @@ namespace hpx {
                                                          "--hpx:queuing=local-priority only.");
             }
 #endif
-#if defined(HPX_HAVE_HWLOC)
+#if defined(XXX_HPX_HAVE_HWLOC)
             // affinity control is available for HWLOC only
             if (vm.count("hpx:affinity")) {
                 throw detail::command_line_error("Invalid command line option "
@@ -318,6 +318,7 @@ namespace hpx {
                     );
 
                     pools_.push_back(pool);
+                    break;
                 }
                 case -1 : //! unspecified = -1
                 {

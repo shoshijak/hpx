@@ -27,6 +27,22 @@
 #include <algorithm>
 
 namespace hpx {
+
+    namespace resource {
+        class resource_partitioner;
+    }
+
+    // if the resource partitioner is accessed before the HPX runtime has started
+    // then on first access, this function should be used, to ensure that commad line
+    // affinity binding options are honoured. Use this function signature only once
+    // and thereafter use the parameter free version.
+    extern HPX_EXPORT hpx::resource::resource_partitioner & get_resource_partitioner(
+        int argc, char **argv);
+
+    // may be used anywhere in code and returns a reference to the
+    // single, global resource partitioner
+    extern HPX_EXPORT hpx::resource::resource_partitioner & get_resource_partitioner();
+
 namespace resource
 {
 
@@ -113,7 +129,7 @@ namespace resource
         scheduler_function  create_function_;
     };
 
-    class HPX_EXPORT resource_partitioner{
+    class HPX_EXPORT resource_partitioner {
     public:
 
         // constructor: users shouldn't use the constructor
@@ -165,6 +181,7 @@ namespace resource
         // Does initialization of all resources and internal data of the resource partitioner
         // called in hpx_init
         void init_resources(util::command_line_handling cfg);
+        void configure_pools();
 
         // called in runtime::assign_cores()
         size_t init(threads::policies::init_affinity_data data) {
@@ -190,6 +207,9 @@ namespace resource
         const std::vector<numa_domain> &get_numa_domains() {
             return numa_domains_;
         }
+
+        // allow this free function access so that it can perform command line parsing
+        friend resource_partitioner &hpx::get_resource_partitioner(int argc, char **argv);
 
     private:
 
@@ -217,6 +237,12 @@ namespace resource
         init_pool_data* get_default_pool();
 
         ////////////////////////////////////////////////////////////////////////
+        boost::program_options::options_description define_command_line_options();
+
+        void parse_command_line_options(
+            int argc, char **argv, boost::program_options::options_description &opt);
+
+        ////////////////////////////////////////////////////////////////////////
 
         // counter for instance numbers
         static boost::atomic<int> instance_number_counter_;
@@ -237,18 +263,11 @@ namespace resource
         bool set_affinity_from_resource_partitioner_;
 
         std::vector<numa_domain> numa_domains_;
-
+        std::size_t num_threads_;
+        std::string queuing_;
     };
 
     } // namespace resource
-
-    static resource::resource_partitioner & get_resource_partitioner()
-    {
-        util::static_<resource::resource_partitioner, std::false_type> rp;
-        return rp.get();
-    }
-
-
 } // namespace hpx
 
 

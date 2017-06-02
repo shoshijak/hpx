@@ -6,6 +6,8 @@
 #include <hpx/runtime/resource_partitioner.hpp>
 #include <hpx/runtime/threads/thread_data_fwd.hpp>
 #include <hpx/include/runtime.hpp>
+#include <hpx/util/parse_command_line.hpp>
+#include <hpx/util/batch_environment.hpp>
 //
 #include <bitset>
 
@@ -16,6 +18,32 @@
 #endif
 
 namespace hpx {
+
+    resource::resource_partitioner & get_resource_partitioner()
+    {
+        util::static_<resource::resource_partitioner, std::false_type> rp;
+        return rp.get();
+    }
+
+    resource::resource_partitioner & get_resource_partitioner(int argc, char **argv)
+    {
+        using namespace boost::program_options;
+        resource::resource_partitioner & rp = get_resource_partitioner();
+        options_description opt = rp.define_command_line_options();
+        rp.parse_command_line_options(argc, argv, opt);
+        return rp;
+    }
+
+    namespace util { namespace detail {
+    std::size_t handle_num_threads(util::manage_config& cfgmap,
+        boost::program_options::variables_map& vm,
+        util::batch_environment& env, bool using_nodelist, bool initial);
+
+    std::size_t handle_num_cores(util::manage_config& cfgmap,
+        boost::program_options::variables_map& vm, std::size_t num_threads,
+        util::batch_environment& env);
+    }}
+
 
     namespace detail {
 
@@ -292,7 +320,10 @@ namespace resource
         // make sure the sum of the number of desired threads is strictly smaller
         // than the total number of OS-threads that will be created (specified by --hpx:threads)
         if(num_threads_desired_total > affinity_data_.get_num_threads()){
-            throw std::invalid_argument("The desired number of threads is greater than the number of threads provided in the command line. \n");
+            std::cout << "affinity data " << affinity_data_.get_num_threads()
+                      << " desired " << num_threads_desired_total << std::endl;
+            throw std::invalid_argument(
+                "The desired number of threads is greater than the number of threads provided in the command line. \n");
             //! FIXME give indication: --hpx:threads N >= (num_threads_desired_total+1)
         }
 
@@ -549,11 +580,17 @@ namespace resource
         get_pool(pool_name)->set_scheduler(sched);
     }
 
-    void resource_partitioner::init_resources(util::command_line_handling cfg){
+    void resource_partitioner::init_resources(util::command_line_handling cfg)
+    {
+        num_threads_ = cfg.num_threads_;
+        queuing_     = cfg.queuing_;
         set_init_affinity_data(cfg);
-        set_affinity_data(cfg.num_threads_);
-        setup_pools(cfg.num_threads_);
-        set_default_schedulers(cfg.queuing_);
+        set_affinity_data(num_threads_);
+    }
+
+    void resource_partitioner::configure_pools(){
+        setup_pools(num_threads_);
+        set_default_schedulers(queuing_);
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -680,6 +717,119 @@ namespace resource
         for(auto itp : initial_thread_pools_){
             itp.print_pool();
         }
+    }
+
+    using namespace boost::program_options;
+
+    options_description resource_partitioner::define_command_line_options()
+    {
+        options_description thread_options("HPX thread affinity/binding options");
+
+        // clang-format off
+        thread_options.add_options()
+#if defined(HPX_HAVE_HWLOC) || defined(HPX_WINDOWS)
+            ("hpx:pu-offset", value<std::size_t>(),
+              "the first processing unit this instance of HPX should be "
+              "run on (default: 0), valid for "
+              "--hpx:queuing=local, --hpx:queuing=abp-priority, "
+              "--hpx:queuing=static, --hpx:queuing=static-priority, "
+              "and --hpx:queuing=local-priority only")
+            ("hpx:pu-step", value<std::size_t>(),
+              "the step between used processing unit numbers for this "
+              "instance of HPX (default: 1), valid for "
+              "--hpx:queuing=local, --hpx:queuing=abp-priority, "
+              "--hpx:queuing=static, --hpx:queuing=static-priority "
+              "and --hpx:queuing=local-priority only")
+#endif
+#if defined(HPX_HAVE_HWLOC)
+            ("hpx:affinity", value<std::string>(),
+              "the affinity domain the OS threads will be confined to, "
+              "possible values: pu, core, numa, machine (default: pu), valid for "
+              "--hpx:queuing=local, --hpx:queuing=abp-priority, "
+              "--hpx:queuing=static, --hpx:queuing=static-priority "
+              " and --hpx:queuing=local-priority only")
+            ("hpx:bind", value<std::vector<std::string> >()->composing(),
+              "the detailed affinity description for the OS threads, see "
+              "the documentation for a detailed description of possible "
+              "values. Do not use with --hpx:pu-step, --hpx:pu-offset, or "
+              "--hpx:affinity options. Implies --hpx:numa-sensitive=1"
+              "(--hpx:bind=none disables defining thread affinities).")
+            ("hpx:print-bind",
+              "print to the console the bit masks calculated from the "
+              "arguments specified to all --hpx:bind options.")
+#endif
+            ("hpx:threads", value<std::string>(),
+             "the number of operating system threads to spawn for this HPX "
+             "locality (default: 1, using 'all' will spawn one thread for "
+             "each processing unit")
+            ("hpx:cores", value<std::string>(),
+             "the number of cores to utilize for this HPX "
+             "locality (default: 'all', i.e. the number of cores is based on "
+             "the number of total cores in the system)")
+            ("hpx:queuing", value<std::string>(),
+              "the queue scheduling policy to use, options are "
+              "'local', 'local-priority-fifo','local-priority-lifo', "
+              "'abp-priority', "
+              "'hierarchy', 'static', 'static-priority', and "
+              "'periodic-priority' (default: 'local-priority'; "
+              "all option values can be abbreviated)")
+            ("hpx:hierarchy-arity", value<std::size_t>(),
+              "the arity of the of the thread queue tree, valid for "
+               "--hpx:queuing=hierarchy only (default: 2)")
+            ("hpx:high-priority-threads", value<std::size_t>(),
+              "the number of operating system threads maintaining a high "
+              "priority queue (default: number of OS threads), valid for "
+              "--hpx:queuing=local-priority,--hpx:queuing=static-priority, "
+              " and --hpx:queuing=abp-priority only)")
+            ("hpx:numa-sensitive", value<std::size_t>()->implicit_value(0),
+              "makes the local-priority scheduler NUMA sensitive ("
+              "allowed values: 0 - no NUMA sensitivity, 1 - allow only for "
+              "boundary cores to steal across NUMA domains, 2 - "
+              "no cross boundary stealing is allowed (default value: 0)")
+            ;
+        // clang-format on
+        return thread_options;
+    }
+
+    void resource_partitioner::parse_command_line_options(int argc, char **argv,
+        options_description &opt)
+    {
+        // HPX uses a boost program options variable map, but we need it before
+        // hpx-main, so we will create another one here and throw it away after use
+        variables_map vm;
+        store(
+            command_line_parser(argc, argv).options(opt).allow_unregistered().run(), vm);
+        notify(vm);
+
+        std::vector<std::string> ini_cfg;
+        std::vector<std::string> nodelist;
+        util::manage_config cfgmap(ini_cfg);
+        util::runtime_configuration rtcfg(*argv);
+
+        util::batch_environment env(nodelist, rtcfg, false, true);
+        bool using_nodelist = false;
+        bool initial = true;
+        // handle number of cores and threads
+        std::size_t num_threads = hpx::util::detail::handle_num_threads(cfgmap, vm,
+            env, using_nodelist, initial);
+
+        std::size_t num_cores = hpx::util::detail::handle_num_cores(cfgmap, vm, num_threads, env);
+
+        std::cout << "Resource partitioner : threads " << num_threads << " cores " << num_cores << std::endl;
+
+
+        util::function_nonser<
+            int(boost::program_options::variables_map& vm)
+        > hpx_main_f_;
+
+        // handle all common command line switches
+        util::command_line_handling cfg(
+            hpx::runtime_mode_default, hpx_main_f_,
+            std::move(ini_cfg), argv[0]);
+
+        int result = cfg.call(opt, argc, argv);
+
+        init_resources(cfg);
     }
 
     ////////////////////////////////////////////////////////////////////////

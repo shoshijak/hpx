@@ -408,6 +408,7 @@ namespace hpx { namespace util
                 ("hpx:expect-connecting-localities",
                   "this locality expects other localities to dynamically connect "
                   "(implied if the number of initial localities is larger than 1)")
+#if 0
 #if defined(HPX_HAVE_HWLOC) || defined(HPX_WINDOWS)
                 ("hpx:pu-offset", value<std::size_t>(),
                   "the first processing unit this instance of HPX should be "
@@ -467,6 +468,7 @@ namespace hpx { namespace util
                   "allowed values: 0 - no NUMA sensitivity, 1 - allow only for "
                   "boundary cores to steal across NUMA domains, 2 - "
                   "no cross boundary stealing is allowed (default value: 0)")
+        #endif
             ;
 
             options_description config_options("HPX configuration options");
