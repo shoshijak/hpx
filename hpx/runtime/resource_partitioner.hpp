@@ -242,6 +242,7 @@ namespace resource
         void set_init_affinity_data();
         void setup_pools();
         void setup_schedulers();
+        void reconfigure_affinities();
         bool check_empty_pools() const;
 
 
