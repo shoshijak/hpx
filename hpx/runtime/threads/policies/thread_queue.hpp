@@ -27,11 +27,11 @@
 #endif
 
 #include <boost/atomic.hpp>
-#include <boost/exception_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <list>
 #include <map>
@@ -822,7 +822,7 @@ namespace hpx { namespace threads { namespace policies
             }
         }
 
-        /// Return the next thread to be executed, return false if non is
+        /// Return the next thread to be executed, return false if none is
         /// available
         bool get_next_thread(threads::thread_data*& thrd,
             bool allow_stealing = false, bool steal = false) HPX_HOT
@@ -952,7 +952,7 @@ namespace hpx { namespace threads { namespace policies
             }
 
             std::vector<thread_id_type> ids;
-            ids.reserve(count);
+            ids.reserve(static_cast<std::size_t>(count));
 
             if (state == unknown)
             {
@@ -1071,7 +1071,7 @@ namespace hpx { namespace threads { namespace policies
         ///////////////////////////////////////////////////////////////////////
         void on_start_thread(std::size_t num_thread) {}
         void on_stop_thread(std::size_t num_thread) {}
-        void on_error(std::size_t num_thread, boost::exception_ptr const& e) {}
+        void on_error(std::size_t num_thread, std::exception_ptr const& e) {}
 
     private:
         mutable mutex_type mtx_;                    ///< mutex protecting the members

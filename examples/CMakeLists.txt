@@ -7,6 +7,7 @@
 
 set(subdirs
     1d_hydro
+    1d_stencil
     accumulators
     allgather
     async_io
@@ -19,28 +20,28 @@ set(subdirs
     jacobi_smp
     nqueen
     performance_counters
-    queue
     quickstart
     qt
     random_mem_access
+    resource_partitioner
     spell_check
     startup_shutdown
     thread_aware_timer
     throttle
+    tuplespace
+    transpose
    )
+
+if(HPX_WITH_QUEUE_COMPATIBILITY)
+  set(subdirs ${subdirs}
+      queue
+     )
+endif()
 
 if(HPX_WITH_FORTRAN)
   set(subdirs ${subdirs}
     sheneos
     )
-endif()
-
-if(HPX_WITH_CXX11_LAMBDAS)
-  set(subdirs ${subdirs}
-      1d_stencil
-      tuplespace
-      transpose
-     )
 endif()
 
 if(HPX_WITH_APEX)

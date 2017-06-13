@@ -12,7 +12,7 @@
 #include <hpx/lcos/when_all.hpp>
 #include <hpx/parallel/executors/execution.hpp>
 #include <hpx/parallel/executors/static_chunk_size.hpp>
-#include <hpx/runtime/threads/executors/thread_pool_attached_executors.hpp>
+#include <hpx/parallel/executors/thread_pool_attached_executors.hpp>
 #include <hpx/traits/executor_traits.hpp>
 #include <hpx/traits/is_executor.hpp>
 #include <hpx/util/deferred_call.hpp>
@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <iterator>
 #include <type_traits>
 #include <utility>
@@ -90,18 +91,18 @@ namespace hpx { namespace compute { namespace host
         }
 
         /// \cond NOINTERNAL
-        bool operator==(block_executor const& rhs) const HPX_NOEXCEPT
+        bool operator==(block_executor const& rhs) const noexcept
         {
             return std::equal(targets_.begin(), targets_.end(),
                 rhs.targets_.begin());
         }
 
-        bool operator!=(block_executor const& rhs) const HPX_NOEXCEPT
+        bool operator!=(block_executor const& rhs) const noexcept
         {
             return !(*this == rhs);
         }
 
-        std::vector<host::target> const& context() const HPX_NOEXCEPT
+        std::vector<host::target> const& context() const noexcept
         {
             return targets_;
         }
@@ -116,7 +117,7 @@ namespace hpx { namespace compute { namespace host
 
         template <typename F, typename ... Ts>
         hpx::future<
-            typename hpx::util::detail::deferred_result_of<F(Ts&&...)>::type>
+            typename hpx::util::detail::invoke_deferred_result<F, Ts...>::type>
         async_execute(F && f, Ts &&... ts)
         {
             std::size_t current = ++current_ % executors_.size();
@@ -125,7 +126,7 @@ namespace hpx { namespace compute { namespace host
         }
 
         template <typename F, typename ... Ts>
-        typename hpx::util::detail::deferred_result_of<F(Ts&&...)>::type
+        typename hpx::util::detail::invoke_deferred_result<F, Ts...>::type
         sync_execute(F && f, Ts &&... ts)
         {
             std::size_t current = ++current_ % executors_.size();
@@ -178,12 +179,10 @@ namespace hpx { namespace compute { namespace host
                 return results;
             }
             catch (std::bad_alloc const& ba) {
-                boost::throw_exception(ba);
+                throw ba;
             }
             catch (...) {
-                boost::throw_exception(
-                    exception_list(boost::current_exception())
-                );
+                throw exception_list(std::current_exception());
             }
         }
 
@@ -228,12 +227,10 @@ namespace hpx { namespace compute { namespace host
                 return results;
             }
             catch (std::bad_alloc const& ba) {
-                boost::throw_exception(ba);
+                throw ba;
             }
             catch (...) {
-                boost::throw_exception(
-                    exception_list(boost::current_exception())
-                );
+                throw exception_list(std::current_exception());
             }
         }
 
@@ -269,25 +266,25 @@ namespace hpx { namespace traits
 
     template <typename Executor>
     struct is_one_way_executor<
-        compute::host::block_executor<Executor> >
+            compute::host::block_executor<Executor> >
       : std::true_type
     {};
 
     template <typename Executor>
     struct is_two_way_executor<
-        compute::host::block_executor<Executor> >
+            compute::host::block_executor<Executor> >
       : std::true_type
     {};
 
     template <typename Executor>
     struct is_bulk_one_way_executor<
-        compute::host::block_executor<Executor> >
+            compute::host::block_executor<Executor> >
       : std::true_type
     {};
 
     template <typename Executor>
     struct is_bulk_two_way_executor<
-        compute::host::block_executor<Executor> >
+            compute::host::block_executor<Executor> >
       : std::true_type
     {};
 }}

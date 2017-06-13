@@ -18,19 +18,18 @@
 #include <hpx/runtime/parcelset/locality.hpp>
 #include <hpx/runtime/parcelset/parcelhandler.hpp>
 #include <hpx/runtime/parcelset/parcelport.hpp>
-#include <hpx/runtime/threads/policies/affinity_data.hpp>
+#include <hpx/runtime/threads/policies/affinity_data.hpp> //! FIXME remove
 #include <hpx/runtime/threads/policies/callback_notifier.hpp>
 #include <hpx/runtime/threads/threadmanager.hpp>
-#include <hpx/runtime/threads/topology.hpp>
+#include <hpx/runtime/threads/topology.hpp> //! FIXME remove
 #include <hpx/util/generate_unique_ids.hpp>
 #include <hpx/util/io_service_pool.hpp>
 #include <hpx/util/thread_specific_ptr.hpp>
 #include <hpx/util_fwd.hpp>
 
-#include <boost/exception_ptr.hpp>
-
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <sstream>
 #include <string>
 
@@ -41,7 +40,6 @@ namespace hpx
     /// The \a runtime class encapsulates the HPX runtime system in a simple to
     /// use way. It makes sure all required parts of the HPX runtime system are
     /// properly initialized.
-    template <typename SchedulingPolicy>
     class HPX_EXPORT runtime_impl : public runtime
     {
     private:
@@ -60,24 +58,13 @@ namespace hpx
             bool& running);
 
     public:
-        typedef SchedulingPolicy scheduling_policy_type;
         typedef threads::policies::callback_notifier notification_policy_type;
-
-        typedef typename scheduling_policy_type::init_parameter_type
-            init_scheduler_type;
 
         /// Construct a new HPX runtime instance
         ///
         /// \param locality_mode  [in] This is the mode the given runtime
         ///                       instance should be executed in.
-        /// \param num_threads    [in] The initial number of threads to be started
-        ///                       by the thread-manager.
-        explicit runtime_impl(util::runtime_configuration & rtcfg,
-            runtime_mode locality_mode = runtime_mode_console,
-            std::size_t num_threads = 1,
-            init_scheduler_type const& init = init_scheduler_type(),
-            threads::policies::init_affinity_data const& affinity_init =
-                threads::policies::init_affinity_data());
+        explicit runtime_impl(util::runtime_configuration & rtcfg);
 
         /// \brief The destructor makes sure all HPX runtime services are
         ///        properly shut down before exiting.
@@ -154,7 +141,7 @@ namespace hpx
         /// \param e          [in] This is an instance encapsulating an
         ///                   exception which lead to this function call.
         void report_error(std::size_t num_thread,
-            boost::exception_ptr const& e);
+            std::exception_ptr const& e);
 
         /// \brief Report a non-recoverable error to the runtime system
         ///
@@ -164,7 +151,7 @@ namespace hpx
         /// \note This function will retrieve the number of the current
         ///       shepherd thread and forward to the report_error function
         ///       above.
-        void report_error(boost::exception_ptr const& e);
+        void report_error(std::exception_ptr const& e);
 
         /// \brief Run the HPX runtime system, use the given function for the
         ///        main \a thread and block waiting for all threads to
@@ -376,11 +363,9 @@ namespace hpx
         util::unique_id_ranges id_pool_;
         runtime_mode mode_;
         int result_;
-        std::size_t num_threads_;
         util::io_service_pool main_pool_;
         util::io_service_pool io_pool_;
         util::io_service_pool timer_pool_;
-        scheduling_policy_type scheduler_;
         notification_policy_type notifier_;
         boost::scoped_ptr<hpx::threads::threadmanager_base> thread_manager_;
         parcelset::parcelhandler parcel_handler_;
@@ -389,7 +374,7 @@ namespace hpx
         boost::signals2::scoped_connection default_error_sink_;
 
         compat::mutex mtx_;
-        boost::exception_ptr exception_;
+        std::exception_ptr exception_;
     };
 }
 

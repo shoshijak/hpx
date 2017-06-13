@@ -11,6 +11,7 @@
 #include <hpx/lcos/local/spinlock.hpp>
 #include <hpx/runtime/threads/thread_enums.hpp>
 #include <hpx/runtime/threads/thread_executor.hpp>
+#include <hpx/runtime/resource_partitioner.hpp>
 #include <hpx/util/steady_clock.hpp>
 #include <hpx/util/thread_description.hpp>
 #include <hpx/util/unique_function.hpp>
@@ -78,7 +79,7 @@ namespace hpx { namespace threads { namespace executors
             mask_cref_type get_pu_mask(topology const& topology,
                 std::size_t num_thread) const
             {
-                return scheduler_.Scheduler::get_pu_mask(topology, num_thread);
+                return hpx::get_resource_partitioner().get_affinity_data()->get_pu_mask(num_thread, scheduler_.numa_sensitive());
             }
 
             /// Set the new scheduler mode
@@ -107,6 +108,9 @@ namespace hpx { namespace threads { namespace executors
             // Remove the given processing unit from the scheduler.
             void remove_processing_unit(std::size_t thread_num, error_code& ec);
 
+            // return the description string of the underlying scheduler
+            char const* get_description() const;
+
             // give invoking context a chance to catch up with its tasks
             void suspend_back_into_calling_context(std::size_t virt_core);
 
@@ -130,6 +134,7 @@ namespace hpx { namespace threads { namespace executors
             // policy elements
             std::size_t const max_punits_;
             std::size_t const min_punits_;
+            boost::atomic<std::size_t> curr_punits_;
 
             // resource manager registration
             std::size_t cookie_;
@@ -164,15 +169,6 @@ namespace hpx { namespace threads { namespace executors
     };
 #endif
 
-#if defined(HPX_HAVE_THROTTLE_SCHEDULER) && defined(HPX_HAVE_APEX)
-    struct HPX_EXPORT throttle_queue_executor : public scheduled_executor
-    {
-        throttle_queue_executor();
-
-        explicit throttle_queue_executor(std::size_t max_punits,
-            std::size_t min_punits = 1);
-    };
-#endif
 
     struct HPX_EXPORT local_priority_queue_executor : public scheduled_executor
     {
@@ -191,6 +187,21 @@ namespace hpx { namespace threads { namespace executors
             std::size_t min_punits = 1);
     };
 #endif
+
+
+#if defined(HPX_HAVE_THROTTLING_SCHEDULER)
+    struct HPX_EXPORT throttling_executor : public scheduled_executor
+    {
+        throttling_executor();
+
+        explicit throttling_executor(std::size_t max_punits,
+            std::size_t min_punits = 1);
+    };
+#endif
+
+
+
+
 }}}
 
 #include <hpx/config/warnings_suffix.hpp>

@@ -34,10 +34,10 @@
 #include <hpx/version.hpp>
 
 #include <boost/atomic.hpp>
-#include <boost/exception_ptr.hpp>
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -231,13 +231,12 @@ namespace hpx
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    runtime::runtime(util::runtime_configuration & rtcfg
-          , threads::policies::init_affinity_data const& affinity_init)
+    runtime::runtime(util::runtime_configuration & rtcfg)
       : ini_(rtcfg),
         instance_number_(++instance_number_counter_),
         thread_support_(new util::thread_mapper),
-        affinity_init_(affinity_init),
-        topology_(threads::create_topology()),
+        resource_partitioner_(&get_resource_partitioner()),
+        topology_(resource_partitioner_->get_topology()),
         state_(state_invalid),
         memory_(new components::server::memory),
         runtime_support_(new components::server::runtime_support(ini_))
@@ -283,7 +282,7 @@ namespace hpx
             runtime::uptime_.reset(new std::uint64_t);
             *runtime::uptime_.get() = util::high_resolution_clock::now();
 
-            threads::thread_self::init_self();
+            threads::thread_self::init_self(); // done in resource_partitioner
         }
     }
 
@@ -326,7 +325,7 @@ namespace hpx
         return *thread_support_;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
     void runtime::register_query_counters(
         std::shared_ptr<util::query_counters> const& active_counters)
     {
@@ -575,15 +574,8 @@ namespace hpx
 
     std::uint32_t runtime::assign_cores()
     {
-        // initialize thread affinity settings in the scheduler
-        if (affinity_init_.used_cores_ == 0) {
-            // correct used_cores from config data if appropriate
-            affinity_init_.used_cores_ = std::size_t(
-                this->get_config().get_first_used_core());
-        }
-
         return static_cast<std::uint32_t>(
-            this->get_thread_manager().init(affinity_init_));
+            hpx::get_resource_partitioner().init());
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -622,7 +614,7 @@ namespace hpx
         rt->unregister_thread();
     }
 
-    void report_error(std::size_t num_thread, boost::exception_ptr const& e)
+    void report_error(std::size_t num_thread, std::exception_ptr const& e)
     {
         // Early and late exceptions
         if (!threads::threadmanager_is(state_running))
@@ -638,7 +630,7 @@ namespace hpx
         hpx::applier::get_applier().get_thread_manager().report_error(num_thread, e);
     }
 
-    void report_error(boost::exception_ptr const& e)
+    void report_error(std::exception_ptr const& e)
     {
         // Early and late exceptions
         if (!threads::threadmanager_is(state_running))
@@ -673,35 +665,33 @@ namespace hpx
 
     ///////////////////////////////////////////////////////////////////////////
     std::string get_config_entry(std::string const& key, std::string const& dflt)
-    {
-        if (nullptr == get_runtime_ptr())
-            return dflt;
-        return get_runtime().get_config().get_entry(key, dflt);
+    { //! FIXME runtime_configuration should probs be a member of hpx::runtime only, not command_line_handling
+        //! FIXME change functions in this section accordingly
+        if (get_runtime_ptr() != nullptr)
+            return get_runtime().get_config().get_entry(key, dflt);
+        return get_resource_partitioner().get_command_line_switches().rtcfg_.get_entry(key, dflt);
     }
 
     std::string get_config_entry(std::string const& key, std::size_t dflt)
     {
-        runtime* rt = get_runtime_ptr();
-        if (nullptr == rt)
-            return std::to_string(dflt);
-        return get_runtime().get_config().get_entry(key, dflt);
+        if (get_runtime_ptr() != nullptr)
+            return get_runtime().get_config().get_entry(key, dflt);
+        return get_resource_partitioner().get_command_line_switches().rtcfg_.get_entry(key, dflt);
     }
 
     // set entries
     void set_config_entry(std::string const& key, std::string const& value)
     {
-        runtime* rt = get_runtime_ptr();
-        if (nullptr == rt)
-            return;
-        return rt->get_config().add_entry(key, value);
+        if (get_runtime_ptr() != nullptr)
+            return get_runtime_ptr()->get_config().add_entry(key, value);
+        return get_resource_partitioner().get_command_line_switches().rtcfg_.add_entry(key, value);
     }
 
     void set_config_entry(std::string const& key, std::size_t value)
     {
-        runtime* rt = get_runtime_ptr();
-        if (nullptr == rt)
-            return;
-        return rt->get_config().add_entry(key, std::to_string(value));
+        if (get_runtime_ptr() != nullptr)
+            return get_runtime_ptr()->get_config().add_entry(key, std::to_string(value));
+        return get_resource_partitioner().get_command_line_switches().rtcfg_.add_entry(key, std::to_string(value));
     }
 
     void set_config_entry_callback(std::string const& key,
@@ -709,10 +699,9 @@ namespace hpx
             void(std::string const&, std::string const&)
         > const& callback)
     {
-        runtime* rt = get_runtime_ptr();
-        if (nullptr == rt)
-            return;
-        return rt->get_config().add_notification_callback(key, callback);
+        if (get_runtime_ptr() != nullptr)
+            return get_runtime_ptr()->get_config().add_notification_callback(key, callback);
+        return get_resource_partitioner().get_command_line_switches().rtcfg_.add_notification_callback(key, callback);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1266,4 +1255,3 @@ namespace hpx
         if (nullptr != rt) rt->stop_evaluating_counters();
     }
 }
-

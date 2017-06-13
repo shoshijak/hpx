@@ -19,8 +19,11 @@
 #include <hpx/util/high_resolution_timer.hpp>
 #include <hpx/util/logging.hpp>
 
+#include <boost/exception/exception.hpp>
+
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <sstream>
 #include <utility>
@@ -52,7 +55,10 @@ namespace hpx { namespace parcelset
             for (std::size_t i = 0; i != num_zero_copy_chunks; ++i)
             {
                 transmission_chunk_type& c = buffer.transmission_chunks_[i];
-                std::uint64_t first = c.first, second = c.second;
+                std::size_t first = static_cast<std::size_t>(
+                    static_cast<std::uint64_t>(c.first));
+                std::size_t second = static_cast<std::size_t>(
+                    static_cast<std::uint64_t>(c.second));
 
                 HPX_ASSERT(buffer.chunks_[i].size() == second);
 
@@ -66,7 +72,10 @@ namespace hpx { namespace parcelset
                  ++i)
             {
                 transmission_chunk_type& c = buffer.transmission_chunks_[i];
-                std::uint64_t first = c.first, second = c.second;
+                std::size_t first = static_cast<std::size_t>(
+                    static_cast<std::uint64_t>(c.first));
+                std::size_t second = static_cast<std::size_t>(
+                    static_cast<std::uint64_t>(c.second));
 
                 // find next free entry
                 while (chunks[index].size_ != 0)
@@ -100,7 +109,8 @@ namespace hpx { namespace parcelset
       , std::size_t num_thread = -1
     )
     {
-        std::uint64_t inbound_data_size = buffer.data_size_;
+        std::size_t inbound_data_size = static_cast<std::size_t>(
+            static_cast<std::uint64_t>(buffer.data_size_));
 
         // protect from un-handled exceptions bubbling up
         try {
@@ -123,6 +133,7 @@ namespace hpx { namespace parcelset
                     }
                     if (parcel_count > 1)
                         deferred_parcels.reserve(parcel_count);
+
                     for(std::size_t i = 0; i != parcel_count; ++i)
                     {
                         bool deferred_schedule = parcel_count > 1;
@@ -176,7 +187,7 @@ namespace hpx { namespace parcelset
                                 hpx::naming::get_agas_client();
                             client.route(
                                 std::move(p),
-                                &detail::parcel_route_handler,
+                                &parcelset::detail::parcel_route_handler,
                                 threads::thread_priority_normal);
                         }
                         // If we got a direct action,
@@ -225,31 +236,31 @@ namespace hpx { namespace parcelset
                 LPT_(error)
                     << "decode_message: caught hpx::exception: "
                     << e.what();
-                hpx::report_error(boost::current_exception());
+                hpx::report_error(std::current_exception());
             }
             catch (boost::system::system_error const& e) {
                 LPT_(error)
                     << "decode_message: caught boost::system::error: "
                     << e.what();
-                hpx::report_error(boost::current_exception());
+                hpx::report_error(std::current_exception());
             }
             catch (boost::exception const&) {
                 LPT_(error)
                     << "decode_message: caught boost::exception.";
-                hpx::report_error(boost::current_exception());
+                hpx::report_error(std::current_exception());
             }
             catch (std::exception const& e) {
                 // We have to repackage all exceptions thrown by the
                 // serialization library as otherwise we will loose the
                 // e.what() description of the problem, due to slicing.
-                boost::throw_exception(boost::enable_error_info(
-                    hpx::exception(serialization_error, e.what())));
+                throw boost::enable_error_info(
+                    hpx::exception(serialization_error, e.what()));
             }
         }
         catch (...) {
             LPT_(error)
                 << "decode_message: caught unknown exception.";
-            hpx::report_error(boost::current_exception());
+            hpx::report_error(std::current_exception());
         }
     }
 
