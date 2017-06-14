@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
     rp.create_thread_pool("default", [](
         hpx::threads::policies::callback_notifier &notifier,
         std::size_t index, char const* name,
-        hpx::threads::policies::scheduler_mode m)
+        hpx::threads::policies::scheduler_mode m, std::size_t thread_offset)
     {
         std::cout << "User defined scheduler creation callback " << std::endl;
         high_priority_sched::init_parameter_type init(
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
                     "shared-priority-scheduler");
         high_priority_sched* scheduler = new high_priority_sched(init);
         return new hpx::threads::detail::thread_pool_impl<high_priority_sched>(
-            scheduler, notifier, index, name, m);
+            scheduler, notifier, index, name, m, thread_offset);
     });
 
     // Create a thread pool using the default scheduler provided by HPX
