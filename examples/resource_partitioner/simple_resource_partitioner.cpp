@@ -123,14 +123,14 @@ int main(int argc, char* argv[])
     rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
     std::cout << "[main] " << "thread_pools created \n";
 
-    rp.add_resource(rp.numa_domains()[0].cores_[0].pus_, "mpi");
+    rp.add_resource(rp.numa_domains()[0].cores()[0].pus(), "mpi");
     std::cout << "[main] " << "resources added to thread_pools \n";
 
 /*
     for (const hpx::resource::numa_domain &d : rp.get_numa_domains()) {
-        for (const hpx::resource::core &c : d.cores_) {
-            for (const hpx::resource::pu &p : c.pus_) {
-                if (p.id_ == rp.get_topology().get_number_of_pus()/2) {
+        for (const hpx::resource::core &c : d.cores()) {
+            for (const hpx::resource::pu &p : c.pus()) {
+                if (p.id() == rp.get_topology().get_number_of_pus()/2) {
                     rp.add_resource(p, "single_thread");
                 }
 
