@@ -8,7 +8,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/compat/mutex.hpp>
-#include <hpx/runtime/threads/detail/thread_pool.hpp>
+#include <hpx/runtime/threads/detail/thread_pool_impl.hpp>
 #include <hpx/runtime/threads/policies/callback_notifier.hpp>
 #include <hpx/runtime/threads/thread_enums.hpp>
 #include <hpx/runtime/threads/thread_executor.hpp>
@@ -71,16 +71,15 @@ namespace hpx { namespace threads { namespace executors
 
             /// Return the mask for processing units the given thread is allowed
             /// to run on.
-            mask_cref_type get_pu_mask(topology const& topology,
-                std::size_t num_thread) const
+            mask_cref_type get_pu_mask(std::size_t num_thread) const
             {
-                return pool_.get_pu_mask(topology, num_thread);
+                return pool_->get_pu_mask(num_thread);
             }
 
             /// Set the new scheduler mode
             void set_scheduler_mode(threads::policies::scheduler_mode mode)
             {
-                pool_.set_scheduler_mode(mode);
+                pool_->set_scheduler_mode(mode);
             }
 
         protected:
@@ -93,10 +92,10 @@ namespace hpx { namespace threads { namespace executors
 
         private:
             // the scheduler used by this executor
-            Scheduler scheduler_;
+            Scheduler *scheduler_;
             std::string executor_name_;
             threads::policies::callback_notifier notifier_;
-            threads::detail::thread_pool<Scheduler> pool_;
+            std::unique_ptr<threads::detail::thread_pool_impl<Scheduler>> pool_;
 
             std::size_t num_threads_;
 

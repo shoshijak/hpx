@@ -313,7 +313,7 @@ namespace hpx { namespace threads { namespace executors { namespace detail
         {
             {
                 std::unique_lock<mutex_type> l(mtx_);
-                scheduler_.add_punit(0, thread_num_);
+                get_resource_partitioner().get_affinity_data()->add_punit(0, thread_num_);
                 scheduler_.on_start_thread(0);
             }
 
@@ -351,8 +351,14 @@ namespace hpx { namespace threads { namespace executors { namespace detail
             // threads exist
             HPX_ASSERT(!scheduler_.get_thread_count(
                 unknown, thread_priority_default, 0) ||
-                state == state_terminating);
+                state >= state_terminating);
         }
+    }
+
+    template <typename Scheduler>
+    char const* this_thread_executor<Scheduler>::get_description() const
+    {
+        return scheduler_.get_description();
     }
 
     // Return statistics collected by this scheduler

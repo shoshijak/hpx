@@ -28,6 +28,7 @@
 #include <iostream>
 #include <mutex>
 #include <vector>
+#include <bitset>
 
 #include <hwloc.h>
 
@@ -376,6 +377,7 @@ namespace hpx { namespace threads
 
         int const pu_depth =
             hwloc_get_type_or_below_depth(topo, HWLOC_OBJ_PU);
+
         for (std::size_t i = 0; i != mask_size(mask); ++i)
         {
             if (test(mask, i))
@@ -770,7 +772,7 @@ namespace hpx { namespace threads
     }
 
     void hwloc_topology_info::print_affinity_mask(std::ostream& os,
-        std::size_t num_thread, mask_type const& m) const
+        std::size_t num_thread, mask_type const& m, std::string pool_name) const
     {
         boost::io::ios_flags_saver ifs(os);
         bool first = true;
@@ -805,6 +807,8 @@ namespace hpx { namespace threads
                 detail::print_info(os, obj->parent, true);
                 obj = obj->parent;
             }
+
+            os << ", on pool \"" << pool_name << "\"";
 
             os << std::endl;
         }
@@ -1064,8 +1068,13 @@ namespace hpx { namespace threads
 
         {
             std::unique_lock<hpx::util::spinlock> lk(topo_mtx);
+#if defined(HPX_MINGW)
+            if (hwloc_get_thread_cpubind(topo, pthread_gethandle(handle.native_handle()),
+                    cpuset, HWLOC_CPUBIND_THREAD))
+#else
             if (hwloc_get_thread_cpubind(topo, handle.native_handle(), cpuset,
                     HWLOC_CPUBIND_THREAD))
+#endif
             {
                 hwloc_bitmap_free(cpuset);
                 HPX_THROWS_IF(ec, kernel_error
@@ -1105,6 +1114,64 @@ namespace hpx { namespace threads
     {
         hwloc_free(topo, addr, len);
     }
-}}
+
+    //! FIXME shoshijak: for developping purposes. To be deleted
+#if defined(HPX_HAVE_MAX_CPU_COUNT)
+        typedef std::bitset<HPX_HAVE_MAX_CPU_COUNT> bitset_type;
+#else
+        typedef std::bitset<32> bitset_type;
+#endif
+    void hwloc_topology_info::print_mask_vector(std::vector<mask_type> const& v) const
+    {
+        std::size_t s = v.size();
+        if(s==0) {
+            std::cout << "(empty)\n";
+            return;
+        }
+        std::cout << bitset_type(v[0]) << std::endl ;
+        for(size_t i(1); i<s ;i++){
+            std::cout << bitset_type(v[i]) << "\n";
+        }
+        std::cout << "\n";
+    }
+    void hwloc_topology_info::print_vector(std::vector<std::size_t> const& v) const
+    {
+        std::size_t s = v.size();
+        if(s==0) {
+            std::cout << "(empty)\n";
+            return;
+        }
+        std::cout << v[0];
+        for(size_t i(1); i<s ;i++){
+            std::cout << ", " << v[i];
+        }
+        std::cout << "\n";
+    }
+    void hwloc_topology_info::print_hwloc() const
+    {
+        std::cout << "[HWLOC topology info] number of ...\n"
+        << "number of sockets     : " << get_number_of_sockets() << "\n"
+        << "number of numa nodes  : " << get_number_of_numa_nodes() << "\n"
+        << "number of cores       : " << get_number_of_cores() << "\n"
+        << "number of PUs         : " << get_number_of_pus() << "\n"
+        << "hardware concurrency  : " << hpx::threads::hardware_concurrency() << "\n\n";
+
+        //! -------------------------------------- topology (affinity masks)
+        std::cout << "[HWLOC topology info] affinity masks :\n"
+        << "machine               : \n" << bitset_type(machine_affinity_mask_) << "\n";
+        std::cout << "socket                : \n" ; print_mask_vector(socket_affinity_masks_);
+        std::cout << "numa node             : \n" ; print_mask_vector(numa_node_affinity_masks_);
+        std::cout << "core                  : \n" ; print_mask_vector(core_affinity_masks_);
+        std::cout << "PUs (/threads)        : \n" ; print_mask_vector(thread_affinity_masks_);
+
+        //! -------------------------------------- topology (numbers)
+        std::cout << "[HWLOC topology info] resource numbers :\n";
+        std::cout << "socket                : \n" ; print_vector(socket_numbers_);
+        std::cout << "numa node             : \n" ; print_vector(numa_node_numbers_);
+        std::cout << "core                  : \n" ; print_vector(core_numbers_);
+        std::cout << "PUs (/threads)        : \n" ; print_vector(pu_numbers_);
+    }
+
+    }}
 
 #endif

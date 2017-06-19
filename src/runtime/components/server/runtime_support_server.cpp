@@ -66,6 +66,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -587,10 +588,13 @@ namespace hpx { namespace components { namespace server
         threads::threadmanager_base& tm = appl.get_thread_manager();
 
         for (std::size_t k = 0;
-            tm.get_thread_count() > std::size_t(1 + hpx::get_os_thread_count());
+            tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
             ++k)
         {
-            util::detail::yield_k(k, "runtime_support::dijkstra_termination");
+            // avoid timed suspension, don't boost priority
+            util::detail::yield_k(k % 32,
+                "runtime_support::dijkstra_termination",
+                hpx::threads::pending);
         }
 
         // Now this locality has become passive, thus we can send the token
@@ -628,8 +632,10 @@ namespace hpx { namespace components { namespace server
                 tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
                 ++k)
             {
-                util::detail::yield_k(k,
-                    "runtime_support::dijkstra_termination_detection");
+                // avoid timed suspension, don't boost priority
+                util::detail::yield_k(k % 32,
+                    "runtime_support::dijkstra_termination_detection",
+                    hpx::threads::pending);
             }
 
             return 0;
@@ -689,8 +695,10 @@ namespace hpx { namespace components { namespace server
             tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
             ++k)
         {
-            util::detail::yield_k(k,
-                "runtime_support::send_dijkstra_termination_token");
+            // avoid timed suspension, don't boost priority
+            util::detail::yield_k(k % 32,
+                "runtime_support::send_dijkstra_termination_token",
+                hpx::threads::pending);
         }
 
         // Now this locality has become passive, thus we can send the token
@@ -765,8 +773,10 @@ namespace hpx { namespace components { namespace server
                 tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
                 ++k)
             {
-                util::detail::yield_k(k,
-                    "runtime_support::dijkstra_termination_detection");
+                // avoid timed suspension, don't boost priority
+                util::detail::yield_k(k % 32,
+                    "runtime_support::dijkstra_termination_detection",
+                    hpx::threads::pending);
             }
 
             return 0;
@@ -1093,7 +1103,8 @@ namespace hpx { namespace components { namespace server
             stopped_ = true;
 
             for (std::size_t k = 0;
-                tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
+                tm.get_thread_count() >
+                    std::int64_t(1 + hpx::get_os_thread_count());
                 ++k)
             {
                 // let thread-manager clean up threads
@@ -1106,7 +1117,10 @@ namespace hpx { namespace components { namespace server
                     timed_out = true;
                     break;
                 }
-                util::detail::yield_k(k, "runtime_support::stop");
+
+                // avoid timed suspension, don't boost priority
+                util::detail::yield_k(k % 32,
+                    "runtime_support::stop", hpx::threads::pending);
             }
 
             // If it took longer than expected, kill all suspended threads as
@@ -1116,7 +1130,8 @@ namespace hpx { namespace components { namespace server
                 start_time = t.elapsed();
 
                 for (std::size_t k = 0;
-                    tm.get_thread_count() > std::int64_t(1 + hpx::get_os_thread_count());
+                    tm.get_thread_count() >
+                        std::int64_t(1 + hpx::get_os_thread_count());
                     ++k)
                 {
                     // abort all suspended threads
@@ -1131,7 +1146,10 @@ namespace hpx { namespace components { namespace server
                         // we waited long enough
                         break;
                     }
-                    util::detail::yield_k(k, "runtime_support::stop");
+
+                    // avoid timed suspension, don't boost priority
+                    util::detail::yield_k(k % 32,
+                        "runtime_support::stop", hpx::threads::pending);
                 }
             }
 
@@ -1343,7 +1361,7 @@ namespace hpx { namespace components { namespace server
                     f();
                 }
                 catch (...) {
-                    rt.report_error(boost::current_exception());
+                    rt.report_error(std::current_exception());
                 }
             }
         }
@@ -1355,7 +1373,7 @@ namespace hpx { namespace components { namespace server
                     f();
                 }
                 catch (...) {
-                    rt.report_error(boost::current_exception());
+                    rt.report_error(std::current_exception());
                 }
             }
             lcos::barrier::get_global_barrier().detach();

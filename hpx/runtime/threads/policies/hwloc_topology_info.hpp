@@ -33,10 +33,19 @@
 
 #include <hpx/config/warnings_prefix.hpp>
 
+namespace hpx { namespace resource {
+        class resource_partitioner;
+    }
+}
+
 namespace hpx { namespace threads
 {
+
     struct HPX_EXPORT hwloc_topology_info : topology
     {
+
+        friend resource::resource_partitioner;
+
         hwloc_topology_info();
         ~hwloc_topology_info();
 
@@ -166,7 +175,7 @@ namespace hpx { namespace threads
             ) const;
 
         void print_affinity_mask(std::ostream& os, std::size_t num_thread,
-            mask_type const& m) const;
+            mask_type const& m, std::string pool_name) const;
 
         struct hwloc_topology_tag {};
 
@@ -178,6 +187,11 @@ namespace hpx { namespace threads
 
         /// Free memory that was previously allocated by allocate
         void deallocate(void* addr, std::size_t len) const;
+
+        //! FIXME shoshijak: for developping purposes. To be deleted
+        void print_vector(std::vector<std::size_t> const& v) const;
+        void print_mask_vector(std::vector<mask_type> const& v) const;
+        void print_hwloc() const;
 
     private:
         static mask_type empty_mask;
@@ -249,11 +263,23 @@ namespace hpx { namespace threads
 
         mutable hpx::util::spinlock topo_mtx;
 
+        // Number masks:
+        // Vectors of non-negative integers
+        // Indicating which architecture object each PU belongs to.
+        // For example, numa_node_numbers[0] indicates which numa node
+        // number PU #0 (zero-based index) belongs to
         std::vector<std::size_t> socket_numbers_;
         std::vector<std::size_t> numa_node_numbers_;
         std::vector<std::size_t> core_numbers_;
-        std::vector<std::size_t> pu_numbers_;
+        std::vector<std::size_t> pu_numbers_; // (empty vector)
 
+        // Affinity masks: vectors of bitmasks
+        // - Length of the vector: number of PUs of the machine
+        // - Elements of the vector:
+        // Bitmasks of length equal to the number of PUs of the machine.
+        // The bitmasks indicate which PUs belong to which resource.
+        // For example, core_affinity_masks[0] is a bitmask, where the elements = 1
+        // indicate the PUs that belong to the core on which PU #0 (zero-based index) lies.
         mask_type machine_affinity_mask_;
         std::vector<mask_type> socket_affinity_masks_;
         std::vector<mask_type> numa_node_affinity_masks_;

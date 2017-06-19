@@ -15,6 +15,7 @@
 #include <hpx/exception_fwd.hpp>
 #include <hpx/runtime/naming_fwd.hpp>
 #include <hpx/runtime/threads/cpu_mask.hpp>
+#include <hpx/runtime/threads/thread_data_fwd.hpp>
 
 #include <cstddef>
 #include <iosfwd>
@@ -30,9 +31,18 @@
 
 namespace hpx { namespace threads
 {
-    struct HPX_EXPORT topology
+    struct topology
     {
         virtual ~topology() {}
+
+        /// \brief Return the Socket number of the processing unit the
+        ///        given thread is running on.
+        ///
+        /// \param ec         [in,out] this represents the error status on exit,
+        ///                   if this is pre-initialized to \a hpx#throws
+        ///                   the function will throw on error instead.
+        virtual std::size_t get_socket_number(std::size_t num_thread,
+            error_code& ec = throws) const = 0;
 
         /// \brief Return the NUMA node number of the processing unit the
         ///        given thread is running on.
@@ -150,7 +160,7 @@ namespace hpx { namespace threads
 
         /// \brief Prints the \param m to os in a human readable form
         virtual void print_affinity_mask(std::ostream& os,
-            std::size_t num_thread, mask_type const& m) const = 0;
+            std::size_t num_thread, mask_type const& m, std::string pool_name) const = 0;
 
         /// \brief Reduce thread priority of the current thread.
         ///
@@ -198,6 +208,10 @@ namespace hpx { namespace threads
 
         /// Free memory that was previously allocated by allocate
         virtual void deallocate(void* addr, std::size_t len) const = 0;
+
+        //! FIXME shoshijak: for developping purposes. To be deleted
+        virtual void print_hwloc() const = 0;
+
     };
 
     HPX_API_EXPORT std::size_t hardware_concurrency();
@@ -221,6 +235,14 @@ namespace hpx { namespace threads
         parse_affinity_options(spec, affinities, 1, 1, affinities.size(),
             num_pus, ec);
     }
+
+    HPX_API_EXPORT void parse_affinity_options_from_resource_partitioner(
+            std::vector<mask_type>& affinities,
+            std::size_t used_cores,
+            std::size_t max_cores,
+            std::vector<std::size_t>& num_pus,
+            error_code& ec = throws);
+
 #endif
 
     /// \endcond
